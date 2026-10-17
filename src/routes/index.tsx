@@ -3,8 +3,11 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   Phone, Menu, X, Snowflake, Droplets, Zap, ChevronDown, Clock, ShieldCheck,
   BadgeIndianRupee, ThumbsUp, MapPin, Navigation, Star, Facebook, Instagram,
-  Twitter, Youtube, CheckCircle2, ArrowRight,
+  Twitter, Youtube, CheckCircle2, ArrowRight, Sparkles, Loader2,
 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { diagnoseProblem } from "@/lib/diagnose.functions";
+import type { Diagnosis } from "@/lib/diagnosis";
 import hero from "@/assets/hero.jpg";
 import baAc from "@/assets/ba-ac.jpg";
 import baPlumbing from "@/assets/ba-plumbing.jpg";
@@ -29,7 +32,7 @@ const PHONE_LABEL = "+91 98765 43210";
 const MAPS = "https://www.google.com/maps/search/?api=1&query=Home+Services+Mumbai";
 
 const NAV = [
-  ["Services", "#services"], ["Why Us", "#why"], ["Areas", "#areas"],
+  ["Services", "#services"], ["Ask AI", "#assistant"], ["Why Us", "#why"], ["Areas", "#areas"],
   ["Our Work", "#work"], ["FAQ", "#faq"], ["Contact", "#contact"],
 ] as const;
 
@@ -81,6 +84,7 @@ function useReveal() {
 function Index() {
   useReveal();
   const [menu, setMenu] = useState(false);
+  const [draft, setDraft] = useState<Draft | null>(null);
   useEffect(() => { document.body.style.overflow = menu ? "hidden" : ""; }, [menu]);
 
   return (
@@ -186,9 +190,15 @@ function Index() {
         </section>
 
         {/* Contact */}
+        <section id="assistant" className="mx-auto max-w-xl px-5 py-14">
+          <Heading kicker="AI-powered helper" title="Not sure who to call?" />
+          <p className="mt-2 text-center text-muted-foreground">Describe the problem and we'll suggest the right service and write your booking note.</p>
+          <AiHelper onUse={(d) => { setDraft({ ...d, key: Date.now() }); document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" }); }} />
+        </section>
+
         <section id="contact" className="mx-auto max-w-xl px-5 py-14">
           <Heading kicker="Book a visit" title="Get a Free Quote" />
-          <ContactForm />
+          <ContactForm draft={draft} />
         </section>
 
         {/* FAQ */}
@@ -299,7 +309,57 @@ function Gallery() {
   );
 }
 
-function ContactForm() {
+type Draft = { service: string; notes: string; key: number };
+
+function AiHelper({ onUse }: { onUse: (d: Omit<Draft, "key">) => void }) {
+  const run = useServerFn(diagnoseProblem);
+  const [problem, setProblem] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [res, setRes] = useState<Diagnosis | null>(null);
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (problem.trim().length < 10) { setError("Please describe the problem in a bit more detail."); return; }
+    setLoading(true); setError(null); setRes(null);
+    try {
+      const r = await run({ data: { problem } });
+      if (r.ok) setRes(r.result); else setError(r.error);
+    } catch { setError("We couldn't analyse that right now. Please try again or call us."); }
+    finally { setLoading(false); }
+  };
+  const urgencyCls = res?.urgency === "Emergency" ? "bg-destructive text-destructive-foreground" : res?.urgency === "Soon" ? "bg-accent text-accent-foreground" : "bg-secondary text-secondary-foreground";
+  return (
+    <div className="mt-6 rounded-3xl bg-card p-5 shadow-soft ring-1 ring-border">
+      <form onSubmit={submit} className="flex flex-col gap-3">
+        <label htmlFor="problem" className="text-sm font-semibold">What's going wrong?</label>
+        <textarea id="problem" value={problem} onChange={(e) => setProblem(e.target.value)} rows={4} maxLength={1500}
+          placeholder="e.g. My bedroom AC is running but blowing warm air and dripping water"
+          className="w-full rounded-2xl border-2 border-input bg-background p-4 text-base outline-none transition-colors focus:border-primary" />
+        <button type="submit" disabled={loading} className="tap flex h-14 items-center justify-center gap-2 rounded-2xl bg-ink font-bold text-ink-foreground disabled:opacity-60">
+          {loading ? <><Loader2 className="h-5 w-5 animate-spin" /> Analysing…</> : <><Sparkles className="h-5 w-5" /> Get recommendation</>}
+        </button>
+      </form>
+      {error && <p role="alert" className="mt-3 rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
+      {res && (
+        <div className="mt-5 flex flex-col gap-3 border-t pt-5" aria-live="polite">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-primary px-3 py-1 text-sm font-bold text-primary-foreground">{res.service}</span>
+            <span className={`rounded-full px-3 py-1 text-sm font-bold ${urgencyCls}`}>{res.urgency}</span>
+          </div>
+          <p><b>Likely issue:</b> {res.likelyIssue}</p>
+          <p className="text-sm text-muted-foreground"><b className="text-foreground">Safety tip:</b> {res.safetyTip}</p>
+          <div className="rounded-2xl bg-muted p-4 text-sm"><p className="mb-1 text-xs font-bold uppercase tracking-wider text-muted-foreground">Booking summary</p>{res.bookingSummary}</div>
+          <button type="button" onClick={() => onUse({ service: res.service === "Not sure" ? "" : res.service, notes: res.bookingSummary })}
+            className="tap flex h-14 items-center justify-center gap-2 rounded-2xl bg-primary font-bold text-primary-foreground shadow-cta">
+            Use this to book <ArrowRight className="h-5 w-5" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ContactForm({ draft }: { draft: Draft | null }) {
   const [sent, setSent] = useState(false);
   const submit = (e: FormEvent) => { e.preventDefault(); setSent(true); };
   if (sent) return (
@@ -311,7 +371,7 @@ function ContactForm() {
   );
   const input = "h-14 w-full rounded-2xl border-2 border-input bg-card px-4 text-base outline-none transition-colors focus:border-primary";
   return (
-    <form onSubmit={submit} className="mt-6 flex flex-col gap-4">
+    <form key={draft?.key ?? 0} onSubmit={submit} className="mt-6 flex flex-col gap-4">
       <label className="flex flex-col gap-1.5 text-sm font-semibold">Full name
         <input required name="name" autoComplete="name" placeholder="Your name" className={input} />
       </label>
@@ -319,13 +379,16 @@ function ContactForm() {
         <input required name="phone" type="tel" inputMode="tel" autoComplete="tel" pattern="[0-9+\s-]{10,15}" placeholder="98765 43210" className={input} />
       </label>
       <label className="flex flex-col gap-1.5 text-sm font-semibold">Service needed
-        <select required name="service" defaultValue="" className={input}>
+        <select required name="service" defaultValue={draft?.service ?? ""} className={input}>
           <option value="" disabled>Choose a service</option>
           {SERVICES.map((s) => <option key={s.title}>{s.title}</option>)}
         </select>
       </label>
       <label className="flex flex-col gap-1.5 text-sm font-semibold">Pincode
         <input name="pincode" type="text" inputMode="numeric" autoComplete="postal-code" maxLength={6} placeholder="400001" className={input} />
+      </label>
+      <label className="flex flex-col gap-1.5 text-sm font-semibold">Problem details
+        <textarea name="notes" rows={3} defaultValue={draft?.notes ?? ""} placeholder="Optional" className="w-full rounded-2xl border-2 border-input bg-card p-4 text-base outline-none transition-colors focus:border-primary" />
       </label>
       <button type="submit" className="tap mt-2 h-16 rounded-2xl bg-primary text-lg font-bold text-primary-foreground shadow-cta">Request Callback</button>
     </form>
