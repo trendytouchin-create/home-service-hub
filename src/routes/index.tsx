@@ -1,9 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createBooking } from "@/lib/booking.functions";
+import { TIME_SLOTS } from "@/lib/booking";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   Phone, Menu, X, Snowflake, Droplets, Zap, ChevronDown, Clock, ShieldCheck,
   BadgeIndianRupee, ThumbsUp, MapPin, Navigation, Star, Facebook, Instagram,
-  Twitter, Youtube, CheckCircle2, ArrowRight, Sparkles, Loader2,
+  Twitter, Youtube, ArrowRight, Sparkles, Loader2,
 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { diagnoseProblem } from "@/lib/diagnose.functions";
@@ -360,15 +362,21 @@ function AiHelper({ onUse }: { onUse: (d: Omit<Draft, "key">) => void }) {
 }
 
 function ContactForm({ draft }: { draft: Draft | null }) {
-  const [sent, setSent] = useState(false);
-  const submit = (e: FormEvent) => { e.preventDefault(); setSent(true); };
-  if (sent) return (
-    <div className="mt-6 rounded-3xl bg-card p-8 text-center shadow-soft ring-1 ring-border">
-      <CheckCircle2 className="mx-auto h-14 w-14 text-success" />
-      <h3 className="mt-3 text-xl font-bold">Request received!</h3>
-      <p className="mt-1 text-muted-foreground">We'll call you back within 10 minutes.</p>
-    </div>
-  );
+  const save = useServerFn(createBooking);
+  const navigate = useNavigate();
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const today = new Date().toISOString().slice(0, 10);
+  const submit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const f = Object.fromEntries(new FormData(e.currentTarget)) as { name: string; phone: string; email: string; service: string; pincode: string; notes: string; date: string; slot: string };
+    setBusy(true); setErr(null);
+    try {
+      const r = await save({ data: { name: f.name, phone: f.phone, email: f.email, service: f.service, pincode: f.pincode, notes: f.notes, preferredDate: f.date, timeSlot: f.slot } });
+      if (r.ok) navigate({ to: "/booking/$id", params: { id: r.id } }); else setErr(r.error);
+    } catch { setErr("Please check your details and try again."); }
+    finally { setBusy(false); }
+  };
   const input = "h-14 w-full rounded-2xl border-2 border-input bg-card px-4 text-base outline-none transition-colors focus:border-primary";
   return (
     <form key={draft?.key ?? 0} onSubmit={submit} className="mt-6 flex flex-col gap-4">
@@ -378,19 +386,34 @@ function ContactForm({ draft }: { draft: Draft | null }) {
       <label className="flex flex-col gap-1.5 text-sm font-semibold">Phone number
         <input required name="phone" type="tel" inputMode="tel" autoComplete="tel" pattern="[0-9+\s-]{10,15}" placeholder="98765 43210" className={input} />
       </label>
+      <label className="flex flex-col gap-1.5 text-sm font-semibold">Email
+        <input required name="email" type="email" inputMode="email" autoComplete="email" placeholder="you@example.com" className={input} />
+      </label>
       <label className="flex flex-col gap-1.5 text-sm font-semibold">Service needed
         <select required name="service" defaultValue={draft?.service ?? ""} className={input}>
           <option value="" disabled>Choose a service</option>
           {SERVICES.map((s) => <option key={s.title}>{s.title}</option>)}
         </select>
       </label>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <label className="flex flex-col gap-1.5 text-sm font-semibold">Preferred date
+          <input required name="date" type="date" min={today} defaultValue={today} className={input} />
+        </label>
+        <label className="flex flex-col gap-1.5 text-sm font-semibold">Arrival time
+          <select required name="slot" defaultValue="" className={input}>
+            <option value="" disabled>Choose a time</option>
+            {TIME_SLOTS.map((t) => <option key={t}>{t}</option>)}
+          </select>
+        </label>
+      </div>
       <label className="flex flex-col gap-1.5 text-sm font-semibold">Pincode
         <input name="pincode" type="text" inputMode="numeric" autoComplete="postal-code" maxLength={6} placeholder="400001" className={input} />
       </label>
       <label className="flex flex-col gap-1.5 text-sm font-semibold">Problem details
         <textarea name="notes" rows={3} defaultValue={draft?.notes ?? ""} placeholder="Optional" className="w-full rounded-2xl border-2 border-input bg-card p-4 text-base outline-none transition-colors focus:border-primary" />
       </label>
-      <button type="submit" className="tap mt-2 h-16 rounded-2xl bg-primary text-lg font-bold text-primary-foreground shadow-cta">Request Callback</button>
+      {err && <p role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{err}</p>}
+      <button type="submit" disabled={busy} className="tap mt-2 flex h-16 items-center justify-center gap-2 rounded-2xl bg-primary text-lg font-bold text-primary-foreground shadow-cta disabled:opacity-60">{busy ? <><Loader2 className="h-5 w-5 animate-spin" /> Booking…</> : "Confirm Booking"}</button>
     </form>
   );
 }
