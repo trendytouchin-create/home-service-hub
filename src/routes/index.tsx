@@ -242,7 +242,7 @@ function ServiceCard({ icon: I, title, price, short, more }: (typeof SERVICES)[n
 }
 
 function Areas() {
-  const [open, setOpen] = useState<string | null>(Object.keys(AREAS)[0]);
+  const [open, setOpen] = useState<string | null>(Object.keys(AREAS)[0] ?? null);
   return (
     <div className="mt-6 divide-y overflow-hidden rounded-2xl bg-card ring-1 ring-border">
       {Object.entries(AREAS).map(([zone, list]) => {
