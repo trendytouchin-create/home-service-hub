@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   Phone, Menu, X, Snowflake, Droplets, Zap, ChevronDown, Clock, ShieldCheck,
   BadgeIndianRupee, ThumbsUp, MapPin, Navigation, Star, Facebook, Instagram,
-  Twitter, Youtube, CheckCircle2, ArrowRight, Sparkles, Loader2,
+  Twitter, Youtube, ArrowRight, Sparkles, Loader2,
 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { diagnoseProblem } from "@/lib/diagnose.functions";
