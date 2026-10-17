@@ -369,7 +369,7 @@ function ContactForm({ draft }: { draft: Draft | null }) {
   const today = new Date().toISOString().slice(0, 10);
   const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const f = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>;
+    const f = Object.fromEntries(new FormData(e.currentTarget)) as { name: string; phone: string; email: string; service: string; pincode: string; notes: string; date: string; slot: string };
     setBusy(true); setErr(null);
     try {
       const r = await save({ data: { name: f.name, phone: f.phone, email: f.email, service: f.service, pincode: f.pincode, notes: f.notes, preferredDate: f.date, timeSlot: f.slot } });
