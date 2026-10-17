@@ -1,15 +1,6 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { Output, streamText } from "ai";
-import { z } from "zod";
-
-export const diagnosisSchema = z.object({
-  service: z.enum(["AC Repair", "Plumbing", "Electrical", "Not sure"]),
-  urgency: z.enum(["Emergency", "Soon", "Routine"]),
-  likelyIssue: z.string(),
-  safetyTip: z.string(),
-  bookingSummary: z.string(),
-});
-export type Diagnosis = z.infer<typeof diagnosisSchema>;
+import { diagnosisSchema, type Diagnosis } from "./diagnosis";
 
 const INSTRUCTIONS = `You are a dispatcher for FixHome, a home services company offering only AC Repair, Plumbing and Electrical.
 Given a homeowner's problem description, pick the best service (use "Not sure" only if none fit), set urgency

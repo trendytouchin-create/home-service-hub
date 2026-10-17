@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { diagnoseProblem } from "@/lib/diagnose.functions";
-import type { Diagnosis } from "@/lib/diagnose.server";
+import type { Diagnosis } from "@/lib/diagnosis";
 import hero from "@/assets/hero.jpg";
 import baAc from "@/assets/ba-ac.jpg";
 import baPlumbing from "@/assets/ba-plumbing.jpg";
@@ -32,7 +32,7 @@ const PHONE_LABEL = "+91 98765 43210";
 const MAPS = "https://www.google.com/maps/search/?api=1&query=Home+Services+Mumbai";
 
 const NAV = [
-  ["Services", "#services"], ["Why Us", "#why"], ["Areas", "#areas"],
+  ["Services", "#services"], ["Ask AI", "#assistant"], ["Why Us", "#why"], ["Areas", "#areas"],
   ["Our Work", "#work"], ["FAQ", "#faq"], ["Contact", "#contact"],
 ] as const;
 
