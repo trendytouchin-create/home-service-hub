@@ -10,7 +10,7 @@ bookingSummary: a concise 2-3 sentence note written for the technician summarisi
 Never give prices. Keep everything plain and friendly.`;
 
 export async function diagnose(problem: string): Promise<Diagnosis> {
-  const apiKey = process.env.LOVABLE_API_KEY;
+  const apiKey = process.env['LOVABLE_API_KEY'];
   if (!apiKey) throw new Error("AI is not configured.");
   const provider = createOpenAI({
     baseURL: "https://ai.gateway.lovable.dev/v1",
